@@ -114,12 +114,11 @@ function LoanCard({ loan, isLender, index }: { loan: LoanRequest; isLender: bool
 }
 
 export default function LoansTab() {
-  const { role, borrowerLoans, lenderLoans } = useApp();
+  const { role, loans } = useApp();
   const [filter, setFilter] = useState<FilterType>("all");
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const isLender = role === "lender";
-  const loans = isLender ? lenderLoans : borrowerLoans;
 
   const filteredLoans = filter === "all" ? loans : loans.filter(l => l.status === filter);
 

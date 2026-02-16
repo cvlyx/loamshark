@@ -46,18 +46,13 @@ export default function LenderDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInUp.duration(400)} style={styles.profileSection}>
           <View style={[styles.avatar, { backgroundColor: lender.avatarColor }]}>
-            <Text style={styles.avatarText}>{lender.initials}</Text>
+            <Text style={styles.avatarText}>{lender.name.split(" ").map(n => n[0]).join("").toUpperCase()}</Text>
           </View>
           <View style={styles.nameRow}>
             <Text style={styles.name}>{lender.name}</Text>
             {lender.verified && (
               <MaterialCommunityIcons name="check-decagram" size={20} color={Colors.primary} />
             )}
-          </View>
-          <View style={styles.ratingRow}>
-            <Ionicons name="star" size={16} color={Colors.accent} />
-            <Text style={styles.rating}>{lender.rating}</Text>
-            <Text style={styles.reviews}>({lender.reviewCount} reviews)</Text>
           </View>
           <Text style={styles.description}>{lender.description}</Text>
         </Animated.View>
@@ -128,7 +123,7 @@ export default function LenderDetailScreen() {
               <Ionicons name="calendar-outline" size={20} color={Colors.info} />
               <View>
                 <Text style={styles.statValue}>
-                  {new Date(lender.joinDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  {new Date(lender.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                 </Text>
                 <Text style={styles.statLabel}>Joined</Text>
               </View>

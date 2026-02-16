@@ -40,18 +40,16 @@ function SettingRow({ icon, label, value, onPress }: {
 }
 
 export default function ProfileTab() {
-  const { profile, role, updateProfile, logout, borrowerLoans, lenderLoans } = useApp();
+  const { user, role, updateProfile, logout, loans } = useApp();
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const isLender = role === "lender";
   const [editingRate, setEditingRate] = useState(false);
-  const [rateInput, setRateInput] = useState(String(profile?.interestRate || "5.0"));
+  const [rateInput, setRateInput] = useState(String(user?.interestRate || "5.0"));
 
-  if (!profile) return null;
+  if (!user) return null;
 
-  const totalLoans = isLender
-    ? lenderLoans.filter(l => l.status === "completed" || l.status === "active").length
-    : borrowerLoans.filter(l => l.status === "completed" || l.status === "active").length;
+  const totalLoans = loans.filter(l => l.status === "completed" || l.status === "active").length;
 
   const handleLogout = () => {
     if (Platform.OS === "web") {
@@ -90,15 +88,15 @@ export default function ProfileTab() {
         <View style={[styles.profileHeader, { paddingTop: insets.top + 20 + webTopInset }]}>
           <View style={[styles.profileAvatar, { backgroundColor: Colors.primary }]}>
             <Text style={styles.profileAvatarText}>
-              {profile.name.split(" ").map(n => n[0]).join("")}
+              {user.name.split(" ").map(n => n[0]).join("")}
             </Text>
           </View>
-          <Text style={styles.profileName}>{profile.name}</Text>
+          <Text style={styles.profileName}>{user.name}</Text>
           <View style={styles.roleBadge}>
             <Text style={styles.roleBadgeText}>
               {isLender ? "Lender" : "Borrower"}
             </Text>
-            {profile.verified && (
+            {user.verified && (
               <MaterialCommunityIcons name="check-decagram" size={14} color={Colors.primary} />
             )}
           </View>
@@ -113,7 +111,7 @@ export default function ProfileTab() {
             <View style={styles.profileStatDivider} />
             <View style={styles.profileStat}>
               <Text style={styles.profileStatValue}>
-                {profile.joinDate.slice(0, 7).replace("-", "/")}
+                {user.createdAt.slice(0, 7).replace("-", "/")}
               </Text>
               <Text style={styles.profileStatLabel}>Member Since</Text>
             </View>
@@ -126,19 +124,19 @@ export default function ProfileTab() {
             <SettingRow
               icon={<Ionicons name="person-outline" size={20} color={Colors.primary} />}
               label="Full Name"
-              value={profile.name}
+              value={user.name}
             />
             <View style={styles.settingDivider} />
             <SettingRow
               icon={<Ionicons name="mail-outline" size={20} color={Colors.primary} />}
               label="Email"
-              value={profile.email}
+              value={user.email}
             />
             <View style={styles.settingDivider} />
             <SettingRow
               icon={<Ionicons name="call-outline" size={20} color={Colors.primary} />}
               label="Phone"
-              value={profile.phone}
+              value={user.phone}
             />
           </View>
         </View>
@@ -170,9 +168,9 @@ export default function ProfileTab() {
                 <SettingRow
                   icon={<Feather name="percent" size={20} color={Colors.primary} />}
                   label="Interest Rate"
-                  value={`${profile.interestRate}%`}
+                  value={`${user.interestRate}%`}
                   onPress={() => {
-                    setRateInput(String(profile.interestRate));
+                    setRateInput(String(user.interestRate));
                     setEditingRate(true);
                   }}
                 />
@@ -181,19 +179,19 @@ export default function ProfileTab() {
               <SettingRow
                 icon={<Feather name="dollar-sign" size={20} color={Colors.primary} />}
                 label="Loan Range"
-                value={`$${profile.minLoan} - $${profile.maxLoan}`}
+                value={`$${user.minLoan} - $${user.maxLoan}`}
               />
               <View style={styles.settingDivider} />
               <SettingRow
                 icon={<Feather name="clock" size={20} color={Colors.primary} />}
                 label="Repayment Period"
-                value={`${profile.repaymentDays} days`}
+                value={`${user.repaymentDays} days`}
               />
               <View style={styles.settingDivider} />
               <SettingRow
                 icon={<Ionicons name="wallet-outline" size={20} color={Colors.primary} />}
                 label="Wallet Balance"
-                value={`$${profile.walletBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+                value={`$${user.walletBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
               />
             </View>
           </View>

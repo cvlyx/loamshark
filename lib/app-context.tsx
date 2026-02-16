@@ -1,216 +1,191 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react";
 import { UserRole, UserProfile, LenderProfile, LoanRequest } from "./types";
-import { seedLenders, seedLoans, seedLenderLoans } from "./seed-data";
-import * as Crypto from "expo-crypto";
+import { apiRequest, getApiUrl } from "./query-client";
+import { fetch } from "expo/fetch";
 
 interface AppContextValue {
+  user: UserProfile | null;
   role: UserRole | null;
-  setRole: (role: UserRole) => void;
-  profile: UserProfile | null;
-  updateProfile: (updates: Partial<UserProfile>) => void;
-  lenders: LenderProfile[];
-  borrowerLoans: LoanRequest[];
-  lenderLoans: LoanRequest[];
-  requestLoan: (lenderId: string, amount: number, purpose: string) => void;
-  approveLoan: (loanId: string) => void;
-  declineLoan: (loanId: string) => void;
-  makePayment: (loanId: string, amount: number) => void;
   isLoading: boolean;
-  logout: () => void;
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (data: { username: string; password: string; name: string; email: string; phone?: string; role: UserRole }) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  updateProfile: (updates: Record<string, any>) => Promise<void>;
+  lenders: LenderProfile[];
+  refreshLenders: () => Promise<void>;
+  loans: LoanRequest[];
+  refreshLoans: () => Promise<void>;
+  requestLoan: (lenderId: string, amount: number, purpose: string) => Promise<void>;
+  approveLoan: (loanId: string) => Promise<void>;
+  declineLoan: (loanId: string) => Promise<void>;
+  makePayment: (loanId: string, amount: number) => Promise<void>;
+  authError: string | null;
+  clearAuthError: () => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const STORAGE_KEYS = {
-  ROLE: "lendlink_role",
-  PROFILE: "lendlink_profile",
-  BORROWER_LOANS: "lendlink_borrower_loans",
-  LENDER_LOANS: "lendlink_lender_loans",
-};
-
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<UserRole | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [borrowerLoans, setBorrowerLoans] = useState<LoanRequest[]>([]);
-  const [lenderLoans, setLenderLoans] = useState<LoanRequest[]>([]);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lenders, setLenders] = useState<LenderProfile[]>([]);
+  const [loans, setLoans] = useState<LoanRequest[]>([]);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
+  const role = user?.role as UserRole | null;
+  const isAuthenticated = !!user;
+
+  const clearAuthError = useCallback(() => setAuthError(null), []);
+
+  const fetchJson = useCallback(async (path: string) => {
+    const baseUrl = getApiUrl();
+    const url = new URL(path, baseUrl);
+    const res = await fetch(url.toString(), { credentials: "include" });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || res.statusText);
+    }
+    return res.json();
   }, []);
 
-  async function loadData() {
+  const refreshUser = useCallback(async () => {
     try {
-      const [savedRole, savedProfile, savedBorrowerLoans, savedLenderLoans] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.ROLE),
-        AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
-        AsyncStorage.getItem(STORAGE_KEYS.BORROWER_LOANS),
-        AsyncStorage.getItem(STORAGE_KEYS.LENDER_LOANS),
-      ]);
+      const data = await fetchJson("/api/auth/me");
+      setUser(data);
+    } catch {
+      setUser(null);
+    }
+  }, [fetchJson]);
 
-      if (savedRole) setRoleState(savedRole as UserRole);
-      if (savedProfile) setProfile(JSON.parse(savedProfile));
-      if (savedBorrowerLoans) setBorrowerLoans(JSON.parse(savedBorrowerLoans));
-      else setBorrowerLoans(seedLoans);
-      if (savedLenderLoans) setLenderLoans(JSON.parse(savedLenderLoans));
-      else setLenderLoans(seedLenderLoans);
+  const refreshLenders = useCallback(async () => {
+    try {
+      const data = await fetchJson("/api/lenders");
+      setLenders(data);
     } catch (e) {
-      console.error("Failed to load data:", e);
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to fetch lenders:", e);
     }
-  }
+  }, [fetchJson]);
 
-  async function setRole(newRole: UserRole) {
-    setRoleState(newRole);
-    await AsyncStorage.setItem(STORAGE_KEYS.ROLE, newRole);
+  const refreshLoans = useCallback(async () => {
+    try {
+      const data = await fetchJson("/api/loans");
+      setLoans(
+        data.map((l: any) => ({
+          ...l,
+          requestDate: l.requestDate?.split("T")[0] || "",
+          approvalDate: l.approvalDate?.split("T")[0],
+          dueDate: l.dueDate?.split("T")[0],
+        }))
+      );
+    } catch {
+      setLoans([]);
+    }
+  }, [fetchJson]);
 
-    const defaultProfile: UserProfile = {
-      id: Crypto.randomUUID(),
-      role: newRole,
-      name: newRole === "lender" ? "Alex Morgan" : "Jordan Rivera",
-      email: newRole === "lender" ? "alex@email.com" : "jordan@email.com",
-      phone: "+1 (555) 012-3456",
-      joinDate: new Date().toISOString().split("T")[0],
-      walletBalance: newRole === "lender" ? 12500 : 0,
-      interestRate: 5.0,
-      minLoan: 100,
-      maxLoan: 5000,
-      repaymentDays: 30,
-      description: newRole === "lender"
-        ? "Reliable microlender with competitive rates and fast approvals."
-        : "",
-      verified: true,
-    };
-
-    setProfile(defaultProfile);
-    await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(defaultProfile));
-    await AsyncStorage.setItem(STORAGE_KEYS.BORROWER_LOANS, JSON.stringify(seedLoans));
-    await AsyncStorage.setItem(STORAGE_KEYS.LENDER_LOANS, JSON.stringify(seedLenderLoans));
-    setBorrowerLoans(seedLoans);
-    setLenderLoans(seedLenderLoans);
-  }
-
-  async function updateProfile(updates: Partial<UserProfile>) {
-    if (!profile) return;
-    const updated = { ...profile, ...updates };
-    setProfile(updated);
-    await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(updated));
-  }
-
-  async function requestLoan(lenderId: string, amount: number, purpose: string) {
-    const lender = seedLenders.find(l => l.id === lenderId);
-    if (!lender) return;
-
-    const interest = (amount * lender.interestRate) / 100;
-    const newLoan: LoanRequest = {
-      id: "loan_" + Crypto.randomUUID().slice(0, 8),
-      lenderId,
-      lenderName: lender.name,
-      borrowerName: profile?.name || "You",
-      amount,
-      interestRate: lender.interestRate,
-      totalRepayment: amount + interest,
-      repaymentDays: lender.repaymentDays,
-      status: "pending",
-      requestDate: new Date().toISOString().split("T")[0],
-      amountPaid: 0,
-      purpose,
-      payments: [],
-    };
-
-    const updated = [newLoan, ...borrowerLoans];
-    setBorrowerLoans(updated);
-    await AsyncStorage.setItem(STORAGE_KEYS.BORROWER_LOANS, JSON.stringify(updated));
-  }
-
-  async function approveLoan(loanId: string) {
-    const now = new Date();
-    const updated = lenderLoans.map(loan => {
-      if (loan.id !== loanId) return loan;
-      const dueDate = new Date(now);
-      dueDate.setDate(dueDate.getDate() + loan.repaymentDays);
-      return {
-        ...loan,
-        status: "active" as const,
-        approvalDate: now.toISOString().split("T")[0],
-        dueDate: dueDate.toISOString().split("T")[0],
-      };
-    });
-    setLenderLoans(updated);
-    await AsyncStorage.setItem(STORAGE_KEYS.LENDER_LOANS, JSON.stringify(updated));
-
-    if (profile) {
-      const loan = lenderLoans.find(l => l.id === loanId);
-      if (loan) {
-        const newBalance = profile.walletBalance - loan.amount;
-        await updateProfile({ walletBalance: Math.max(0, newBalance) });
+  useEffect(() => {
+    (async () => {
+      try {
+        await refreshUser();
+      } finally {
+        setIsLoading(false);
       }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      refreshLenders();
+      refreshLoans();
     }
-  }
+  }, [user?.id]);
 
-  async function declineLoan(loanId: string) {
-    const updated = lenderLoans.map(loan =>
-      loan.id === loanId ? { ...loan, status: "declined" as const } : loan
-    );
-    setLenderLoans(updated);
-    await AsyncStorage.setItem(STORAGE_KEYS.LENDER_LOANS, JSON.stringify(updated));
-  }
-
-  async function makePayment(loanId: string, amount: number) {
-    const isLenderLoan = lenderLoans.some(l => l.id === loanId);
-    const loans = isLenderLoan ? lenderLoans : borrowerLoans;
-    const setLoans = isLenderLoan ? setLenderLoans : setBorrowerLoans;
-    const key = isLenderLoan ? STORAGE_KEYS.LENDER_LOANS : STORAGE_KEYS.BORROWER_LOANS;
-
-    const updated = loans.map(loan => {
-      if (loan.id !== loanId) return loan;
-      const newPaid = loan.amountPaid + amount;
-      const newPayment = {
-        id: "pay_" + Crypto.randomUUID().slice(0, 8),
-        amount,
-        date: new Date().toISOString().split("T")[0],
-      };
-      return {
-        ...loan,
-        amountPaid: newPaid,
-        status: newPaid >= loan.totalRepayment ? ("completed" as const) : loan.status,
-        payments: [...loan.payments, newPayment],
-      };
-    });
-
-    setLoans(updated);
-    await AsyncStorage.setItem(key, JSON.stringify(updated));
-
-    if (isLenderLoan && profile) {
-      await updateProfile({ walletBalance: profile.walletBalance + amount });
+  const login = useCallback(async (username: string, password: string) => {
+    setAuthError(null);
+    try {
+      const res = await apiRequest("POST", "/api/auth/login", { username, password });
+      const data = await res.json();
+      setUser(data);
+    } catch (e: any) {
+      const msg = e.message?.includes("401")
+        ? "Invalid username or password"
+        : "Login failed. Please try again.";
+      setAuthError(msg);
+      throw e;
     }
-  }
+  }, []);
 
-  async function logout() {
-    await AsyncStorage.multiRemove(Object.values(STORAGE_KEYS));
-    setRoleState(null);
-    setProfile(null);
-    setBorrowerLoans(seedLoans);
-    setLenderLoans(seedLenderLoans);
-  }
+  const register = useCallback(async (data: { username: string; password: string; name: string; email: string; phone?: string; role: UserRole }) => {
+    setAuthError(null);
+    try {
+      const res = await apiRequest("POST", "/api/auth/register", data);
+      const userData = await res.json();
+      setUser(userData);
+    } catch (e: any) {
+      const msg = e.message?.includes("409")
+        ? "Username already taken"
+        : "Registration failed. Please try again.";
+      setAuthError(msg);
+      throw e;
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+    } catch {}
+    setUser(null);
+    setLoans([]);
+  }, []);
+
+  const updateProfile = useCallback(async (updates: Record<string, any>) => {
+    const res = await apiRequest("PATCH", "/api/profile", updates);
+    const data = await res.json();
+    setUser(data);
+  }, []);
+
+  const requestLoan = useCallback(async (lenderId: string, amount: number, purpose: string) => {
+    await apiRequest("POST", "/api/loans", { lenderId, amount, purpose });
+    await refreshLoans();
+  }, [refreshLoans]);
+
+  const approveLoan = useCallback(async (loanId: string) => {
+    await apiRequest("POST", `/api/loans/${loanId}/approve`);
+    await Promise.all([refreshLoans(), refreshUser()]);
+  }, [refreshLoans, refreshUser]);
+
+  const declineLoan = useCallback(async (loanId: string) => {
+    await apiRequest("POST", `/api/loans/${loanId}/decline`);
+    await refreshLoans();
+  }, [refreshLoans]);
+
+  const makePayment = useCallback(async (loanId: string, amount: number) => {
+    await apiRequest("POST", `/api/loans/${loanId}/pay`, { amount });
+    await Promise.all([refreshLoans(), refreshUser()]);
+  }, [refreshLoans, refreshUser]);
 
   const value = useMemo(() => ({
+    user,
     role,
-    setRole,
-    profile,
+    isLoading,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    refreshUser,
     updateProfile,
-    lenders: seedLenders,
-    borrowerLoans,
-    lenderLoans,
+    lenders,
+    refreshLenders,
+    loans,
+    refreshLoans,
     requestLoan,
     approveLoan,
     declineLoan,
     makePayment,
-    isLoading,
-    logout,
-  }), [role, profile, borrowerLoans, lenderLoans, isLoading]);
+    authError,
+    clearAuthError,
+  }), [user, role, isLoading, isAuthenticated, login, register, logout, refreshUser, updateProfile, lenders, refreshLenders, loans, refreshLoans, requestLoan, approveLoan, declineLoan, makePayment, authError, clearAuthError]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

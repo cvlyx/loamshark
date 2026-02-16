@@ -51,7 +51,7 @@ function LenderCard({ lender, index }: { lender: LenderProfile; index: number })
       >
         <View style={styles.lenderCardTop}>
           <View style={[styles.avatar, { backgroundColor: lender.avatarColor }]}>
-            <Text style={styles.avatarText}>{lender.initials}</Text>
+            <Text style={styles.avatarText}>{lender.name.split(" ").map(n => n[0]).join("").toUpperCase()}</Text>
           </View>
           <View style={styles.lenderInfo}>
             <View style={styles.lenderNameRow}>
@@ -59,11 +59,6 @@ function LenderCard({ lender, index }: { lender: LenderProfile; index: number })
               {lender.verified && (
                 <MaterialCommunityIcons name="check-decagram" size={16} color={Colors.primary} />
               )}
-            </View>
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={13} color={Colors.accent} />
-              <Text style={styles.ratingText}>{lender.rating}</Text>
-              <Text style={styles.reviewCount}>({lender.reviewCount})</Text>
             </View>
           </View>
           <View style={styles.rateContainer}>
@@ -94,7 +89,7 @@ function LenderCard({ lender, index }: { lender: LenderProfile; index: number })
 function BorrowerHome() {
   const { lenders } = useApp();
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"rate" | "rating" | "amount">("rate");
+  const [sortBy, setSortBy] = useState<"rate" | "amount">("rate");
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
@@ -102,7 +97,6 @@ function BorrowerHome() {
     .filter(l => l.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
       if (sortBy === "rate") return a.interestRate - b.interestRate;
-      if (sortBy === "rating") return b.rating - a.rating;
       return b.maxLoan - a.maxLoan;
     });
 
@@ -133,7 +127,6 @@ function BorrowerHome() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortRow}>
           {([
             { key: "rate" as const, label: "Lowest Rate", icon: "trending-down" as const },
-            { key: "rating" as const, label: "Top Rated", icon: "star" as const },
             { key: "amount" as const, label: "Highest Amount", icon: "cash-outline" as const },
           ]).map(item => (
             <Pressable
@@ -182,13 +175,13 @@ function BorrowerHome() {
 }
 
 function LenderDashboard() {
-  const { profile, lenderLoans } = useApp();
+  const { user, loans } = useApp();
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
-  const activeLoans = lenderLoans.filter(l => l.status === "active");
-  const pendingRequests = lenderLoans.filter(l => l.status === "pending");
-  const completedLoans = lenderLoans.filter(l => l.status === "completed");
+  const activeLoans = loans.filter(l => l.status === "active");
+  const pendingRequests = loans.filter(l => l.status === "pending");
+  const completedLoans = loans.filter(l => l.status === "completed");
   const totalEarned = completedLoans.reduce((sum, l) => sum + (l.totalRepayment - l.amount), 0);
   const totalLent = activeLoans.reduce((sum, l) => sum + l.amount, 0);
 
@@ -200,13 +193,13 @@ function LenderDashboard() {
       >
         <View style={[styles.dashHeader, { paddingTop: insets.top + 12 + webTopInset }]}>
           <Text style={styles.dashGreeting}>Welcome back,</Text>
-          <Text style={styles.dashName}>{profile?.name || "Lender"}</Text>
+          <Text style={styles.dashName}>{user?.name || "Lender"}</Text>
         </View>
 
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Wallet Balance</Text>
           <Text style={styles.balanceAmount}>
-            ${(profile?.walletBalance || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            ${(user?.walletBalance || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </Text>
           <View style={styles.balanceDivider} />
           <View style={styles.balanceRow}>

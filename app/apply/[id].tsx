@@ -69,7 +69,7 @@ export default function ApplyScreen() {
       <View style={styles.content}>
         <View style={styles.headerSection}>
           <View style={[styles.lenderAvatar, { backgroundColor: lender.avatarColor }]}>
-            <Text style={styles.lenderInitials}>{lender.initials}</Text>
+            <Text style={styles.lenderInitials}>{lender.name.split(" ").map(n => n[0]).join("").toUpperCase()}</Text>
           </View>
           <Text style={styles.headerTitle}>Apply with {lender.name}</Text>
           <Text style={styles.headerSubtitle}>

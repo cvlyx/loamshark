@@ -36,12 +36,11 @@ function getStatusConfig(status: string) {
 
 export default function LoanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { role, borrowerLoans, lenderLoans, approveLoan, declineLoan, makePayment } = useApp();
+  const { role, loans, approveLoan, declineLoan, makePayment } = useApp();
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const isLender = role === "lender";
-  const allLoans = [...lenderLoans, ...borrowerLoans];
-  const loan = allLoans.find(l => l.id === id);
+  const loan = loans.find(l => l.id === id);
   const [payAmount, setPayAmount] = useState("");
   const [showPayment, setShowPayment] = useState(false);
 

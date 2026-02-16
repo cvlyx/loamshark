@@ -3,10 +3,7 @@ export type UserRole = "lender" | "borrower";
 export interface LenderProfile {
   id: string;
   name: string;
-  initials: string;
   avatarColor: string;
-  rating: number;
-  reviewCount: number;
   interestRate: number;
   minLoan: number;
   maxLoan: number;
@@ -15,13 +12,14 @@ export interface LenderProfile {
   totalAmountLent: number;
   verified: boolean;
   description: string;
-  joinDate: string;
+  createdAt: string;
   responseTime: string;
 }
 
 export interface LoanRequest {
   id: string;
   lenderId: string;
+  borrowerId: string;
   lenderName: string;
   borrowerName: string;
   amount: number;
@@ -45,11 +43,12 @@ export interface Payment {
 
 export interface UserProfile {
   id: string;
+  username: string;
   role: UserRole;
   name: string;
   email: string;
   phone: string;
-  joinDate: string;
+  avatarColor: string;
   walletBalance: number;
   interestRate: number;
   minLoan: number;
@@ -57,4 +56,8 @@ export interface UserProfile {
   repaymentDays: number;
   description: string;
   verified: boolean;
+  createdAt: string;
+  responseTime: string;
+  totalLoansGiven: number;
+  totalAmountLent: number;
 }
