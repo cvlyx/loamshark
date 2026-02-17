@@ -1,3 +1,4 @@
+import "dotenv/config";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "node:http";
 import session from "express-session";
@@ -44,7 +45,17 @@ function requireAuth(req: Request, res: Response, next: Function) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const isRenderEnv = !!process.env.RENDER;
+  const sessionDbUrl = isRenderEnv
+    ? (process.env.INTERNAL_DATABASE_URL ||
+       process.env.DATABASE_URL ||
+       process.env.EXTERNAL_DATABASE_URL)
+    : (process.env.DATABASE_URL || process.env.EXTERNAL_DATABASE_URL);
+
+  const pgPool = new pg.Pool({
+    connectionString: sessionDbUrl,
+    ssl: { rejectUnauthorized: false },
+  });
   const PgSession = connectPgSimple(session);
 
   app.use(

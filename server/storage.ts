@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
@@ -11,7 +12,21 @@ import {
 } from "../shared/schema";
 import bcrypt from "bcrypt";
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const isRenderEnv = !!process.env.RENDER;
+const dbUrl = isRenderEnv
+  ? (process.env.INTERNAL_DATABASE_URL ||
+     process.env.DATABASE_URL ||
+     process.env.EXTERNAL_DATABASE_URL)
+  : (process.env.DATABASE_URL || process.env.EXTERNAL_DATABASE_URL);
+
+if (!dbUrl) {
+  throw new Error("No database URL found. Set INTERNAL_DATABASE_URL or DATABASE_URL.");
+}
+
+const pool = new pg.Pool({
+  connectionString: dbUrl,
+  ssl: { rejectUnauthorized: false },
+});
 export const db = drizzle(pool);
 
 export async function createUser(data: {
