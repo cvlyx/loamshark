@@ -136,13 +136,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(lenders.map(stripPassword));
     } catch (e) {
       console.error("Get lenders error:", e);
-      res.status(500).json({ message: "Failed to fetch lenders" });
+      if (process.env.NODE_ENV === "production") {
+        res.status(500).json({ message: "Failed to fetch lenders" });
+      } else {
+        const err: any = e;
+        res.status(500).json({ message: err?.message || "Failed to fetch lenders", stack: err?.stack });
+      }
     }
   });
 
   app.get("/api/lenders/:id", async (req: Request, res: Response) => {
     try {
-      const user = await getUserById(req.params.id);
+      const user = await getUserById(req.params.id as string);
       if (!user || user.role !== "lender") {
         return res.status(404).json({ message: "Lender not found" });
       }
@@ -210,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/loans/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const loan = await getLoanById(req.params.id);
+      const loan = await getLoanById(req.params.id as string);
       if (!loan) return res.status(404).json({ message: "Loan not found" });
 
       const lender = await getUserById(loan.lenderId);
@@ -234,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/loans/:id/approve", requireAuth, async (req: Request, res: Response) => {
     try {
-      const loan = await approveLoan(req.params.id);
+      const loan = await approveLoan(req.params.id as string);
       if (!loan) {
         return res.status(400).json({ message: "Cannot approve this loan. Check balance and status." });
       }
@@ -247,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/loans/:id/decline", requireAuth, async (req: Request, res: Response) => {
     try {
-      const loan = await declineLoan(req.params.id);
+      const loan = await declineLoan(req.params.id as string);
       if (!loan) return res.status(404).json({ message: "Loan not found" });
       res.json(loan);
     } catch (e) {
@@ -262,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!amount || amount <= 0) {
         return res.status(400).json({ message: "Invalid payment amount" });
       }
-      const result = await makePayment(req.params.id, amount);
+      const result = await makePayment(req.params.id as string, amount);
       if (!result) {
         return res.status(400).json({ message: "Cannot make payment on this loan" });
       }

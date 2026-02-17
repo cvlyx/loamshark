@@ -10,8 +10,8 @@ import Colors from "@/constants/colors";
 import { useApp } from "@/lib/app-context";
 
 function NativeTabLayout() {
-  const { role, lenderLoans } = useApp();
-  const pendingCount = lenderLoans.filter(l => l.status === "pending").length;
+  const { role, loans } = useApp();
+  const pendingCount = loans?.filter(l => l.status === "pending").length || 0;
   const isLender = role === "lender";
 
   return (
@@ -38,8 +38,8 @@ function ClassicTabLayout() {
   const isDark = colorScheme === "dark";
   const isWeb = Platform.OS === "web";
   const isIOS = Platform.OS === "ios";
-  const { role, lenderLoans } = useApp();
-  const pendingCount = lenderLoans.filter(l => l.status === "pending").length;
+  const { role, loans } = useApp();
+  const pendingCount = loans?.filter(l => l.status === "pending").length || 0;
   const isLender = role === "lender";
 
   return (

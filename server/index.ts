@@ -237,14 +237,13 @@ function setupErrorHandler(app: express.Application) {
   setupErrorHandler(app);
 
   const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`express server serving on port ${port}`);
-    },
-  );
+  const listenOptions: any = { port, host: "0.0.0.0" };
+  // `reusePort` is not supported on some platforms (notably Windows in some environments)
+  if (process.platform !== "win32") {
+    listenOptions.reusePort = true;
+  }
+
+  server.listen(listenOptions, () => {
+    log(`express server serving on port ${port}`);
+  });
 })();
