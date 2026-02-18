@@ -133,15 +133,3 @@ eas build --platform android
 **Acknowledgements & Contacts**
 - Built as the Loan-Shark-Hub demo project.
 - For questions or help running the system, open an issue or contact the maintainer.
-
-**License**
-- Add your preferred license file if required.
-
----
-
-If you want, I can:
-- Add more project badges (build, license, coverage)
-- Add a short CONTRIBUTING.md and quick deployment script
-- Update `eas.json` with Play Store signing settings
-
-Which of those would you like next?
