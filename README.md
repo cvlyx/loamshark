@@ -132,4 +132,4 @@ eas build --platform android
 
 **Acknowledgements & Contacts**
 - Built as the Loan-Shark-Hub demo project.
-- For questions or help running the system, open an issue or contact the maintainer.
+- For questions or help running the system, open an issue or contact +265 9916 886 02, calyxchisiza@gmail.com.
